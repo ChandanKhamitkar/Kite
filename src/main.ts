@@ -1,7 +1,8 @@
 import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
-import Anthropic from "@anthropic-ai/sdk";
 import { parseArgs } from "node:util";
+import { getProvider } from "./providers/index.ts";
+import type { Message } from "./types.ts";
 
 config({
   path: fileURLToPath(new URL("../.env", import.meta.url)),
@@ -11,47 +12,31 @@ config({
 const { values } = parseArgs({
   options: {
     prompt: { type: "string", short: "p" },
-    model: { type: "string", default: "mistralai/mistral-medium-3.5" },
+    provider: { type: "string", default: "anthropic-xkiro" },
+    model: { type: "string" },
   },
 });
 
 if (!values.prompt) {
-  console.error("No prompt bhai!");
+  console.error(
+    `No prompt bhai!, try this $ node src/main.ts -p "prompt" --provider anthropic-xkiro or anthropic`,
+  );
   process.exit(1);
 }
 
-const client = new Anthropic({
-  apiKey: process.env.XKIRO_API_KEY,
-  baseURL: "https://api.xkiro.com",
-});
+const provider = getProvider(values.provider);
+const model = values.model ?? provider.defaultModel;
+const messages: Message[] = [
+  {
+    role: "user",
+    content: values.prompt,
+  },
+];
 
-// single LLM call
-// const message = await client.messages.create({
-//   max_tokens: 1024,
-//   system: "You are a concise assistant.",
-//   messages: [
-//     {
-//       role: "user",
-//       content: values.prompt,
-//     },
-//   ],
-//   model: values.model,
-// });
-// console.log(message.content);
-
-// stream of message
-const stream = client.messages.stream({
-  model: values.model,
-  max_tokens: 1024,
-  system: "You are a concise assistant.",
-  messages: [
-    {
-      role: "user",
-      content: values.prompt,
-    },
-  ],
-});
-
-stream.on("text", (text) => process.stdout.write(text));
-
-const final = await stream.finalMessage();
+for await (const event of provider.stream({ messages, model })) {
+    if(event.type === "text_delta") process.stdout.write(event.delta);
+    else {
+        const { usage, stopReason } = event.message;
+        console.log(`\n\n Provider Name=${provider.name} ... Model=${model} ... Usage Input=${usage.input} ... Usage Output=${usage.output} ... StopReason=${stopReason}`)
+    }
+}
