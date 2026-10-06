@@ -1,0 +1,26 @@
+{
+  "name": "kite",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "type": "module",
+  "bin": {
+    "mypi": "./bin/mypi.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "dotenv": "^18.0.5",
+    "groq-sdk": "^1.6.0",
+    "openai": "^7.28.0"
+  }
+}
