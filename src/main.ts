@@ -25,7 +25,23 @@ const client = new Anthropic({
   baseURL: "https://api.xkiro.com",
 });
 
-const message = await client.messages.create({
+// single LLM call
+// const message = await client.messages.create({
+//   max_tokens: 1024,
+//   system: "You are a concise assistant.",
+//   messages: [
+//     {
+//       role: "user",
+//       content: values.prompt,
+//     },
+//   ],
+//   model: values.model,
+// });
+// console.log(message.content);
+
+// stream of message
+const stream = client.messages.stream({
+  model: values.model,
   max_tokens: 1024,
   system: "You are a concise assistant.",
   messages: [
@@ -34,7 +50,8 @@ const message = await client.messages.create({
       content: values.prompt,
     },
   ],
-  model: values.model,
 });
 
-console.log(message.content);
+stream.on("text", (text) => process.stdout.write(text));
+
+const final = await stream.finalMessage();
