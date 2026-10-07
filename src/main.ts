@@ -2,12 +2,15 @@ import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { getProvider } from "./providers/index.ts";
-import type { Message } from "./types.ts";
+import type { Message, AssistantMessage } from "./types.ts";
+import { readTool } from "./tools/read.ts";
 
 config({
   path: fileURLToPath(new URL("../.env", import.meta.url)),
   quiet: true,
 });
+
+const tools = [readTool];
 
 const { values } = parseArgs({
   options: {
@@ -33,10 +36,39 @@ const messages: Message[] = [
   },
 ];
 
-for await (const event of provider.stream({ messages, model })) {
-    if(event.type === "text_delta") process.stdout.write(event.delta);
+async function callModel(): Promise<AssistantMessage> {
+  for await (const event of provider.stream({ messages, model, tools })) {
+    if (event.type === "text_delta") process.stdout.write(event.delta);
     else {
-        const { usage, stopReason } = event.message;
-        console.log(`\n\n Provider Name=${provider.name} ... Model=${model} ... Usage Input=${usage.input} ... Usage Output=${usage.output} ... StopReason=${stopReason}`)
+      const { usage, stopReason } = event.message;
+      console.log(
+        `\n\n Provider Name=${provider.name} ... Model=${model} ... Usage Input=${usage.input} ... Usage Output=${usage.output} ... StopReason=${stopReason}`,
+      );
+
+      return event.message;
     }
+  }
+
+  throw new Error("Stream ended without a done event");
+}
+
+const first = await callModel();
+messages.push(first);
+
+if (first.stopReason === "toolUse") {
+  for (const block of first.content) {
+    if (block.type !== "toolCall") continue;
+
+    console.log(`-> ${block.name}(${JSON.stringify(block.arguments)})`);
+    const result = await readTool.execute(block.arguments);
+    messages.push({
+      role: "toolResult",
+      toolCallId: block.id,
+      toolName: block.name,
+      content: result,
+      isError: false,
+    });
+  }
+
+  messages.push(await callModel());
 }
