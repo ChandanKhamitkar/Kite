@@ -2,15 +2,14 @@ import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { getProvider } from "./providers/index.ts";
-import type { Message, AssistantMessage } from "./types.ts";
-import { readTool } from "./tools/read.ts";
+import type { Message } from "./types.ts";
+import { runAgent } from "./agent/loop.ts";
+import { tools } from "./tools/index.ts";
 
 config({
   path: fileURLToPath(new URL("../.env", import.meta.url)),
   quiet: true,
 });
-
-const tools = [readTool];
 
 const { values } = parseArgs({
   options: {
@@ -36,39 +35,22 @@ const messages: Message[] = [
   },
 ];
 
-async function callModel(): Promise<AssistantMessage> {
-  for await (const event of provider.stream({ messages, model, tools })) {
-    if (event.type === "text_delta") process.stdout.write(event.delta);
-    else {
+await runAgent({
+  provider,
+  model,
+  tools,
+  messages,
+  onEvent(event) {
+    if (event.type === "text") process.stdout.write(event.delta);
+    else if (event.type === "tool_start") console.log(`\n ${event.call.name}`);
+    else if (event.type === "tool_end") {
+      const lines = event.result.split("\n").length;
+      console.log(`\n ${event.isError ? event.result : lines}`);
+    } else if (event.type === "turn_end") {
       const { usage, stopReason } = event.message;
       console.log(
         `\n\n Provider Name=${provider.name} ... Model=${model} ... Usage Input=${usage.input} ... Usage Output=${usage.output} ... StopReason=${stopReason}`,
       );
-
-      return event.message;
     }
-  }
-
-  throw new Error("Stream ended without a done event");
-}
-
-const first = await callModel();
-messages.push(first);
-
-if (first.stopReason === "toolUse") {
-  for (const block of first.content) {
-    if (block.type !== "toolCall") continue;
-
-    console.log(`-> ${block.name}(${JSON.stringify(block.arguments)})`);
-    const result = await readTool.execute(block.arguments);
-    messages.push({
-      role: "toolResult",
-      toolCallId: block.id,
-      toolName: block.name,
-      content: result,
-      isError: false,
-    });
-  }
-
-  messages.push(await callModel());
-}
+  },
+});
