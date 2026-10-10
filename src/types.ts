@@ -1,3 +1,5 @@
+export type Role = "user" | "assistant" | "system";
+
 export type Usage = { input: number; output: number };
 export type StopReason = "stop" | "length" | "toolUse";
 
@@ -31,7 +33,9 @@ export type ToolSpec = {
   description: string;
   parameters: Record<string, unknown>;
 };
+export type ToolRisk = "read" | "write" | "exec";
 export type Tool = ToolSpec & {
+  risk?: ToolRisk;
   execute(args: Record<string, unknown>): Promise<string>;
 };
 export type StreamEvent =
