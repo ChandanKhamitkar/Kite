@@ -49,8 +49,9 @@ export function createAnthropic(
     name: name || "anthropic",
     defaultModel: model || "mistralai/mistral-medium-3.5",
     contextWindow,
-    async *stream({ messages, model, system, tools = [] }) {
-      const stream = client.messages.stream({
+    async *stream({ messages, model, system, tools = [], signal }) {
+      const stream = client.messages.stream(
+        {
         model,
         max_tokens: 4096,
         system,
@@ -60,7 +61,9 @@ export function createAnthropic(
           description: t.description,
           input_schema: t.parameters as Anthropic.Tool.InputSchema,
         })),
-      });
+        },
+        { signal },
+      );
       
       const content: ContentBlock[] = [];
       let json = "";

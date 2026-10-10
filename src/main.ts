@@ -1,26 +1,35 @@
 import { config as loadEnv } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { getProvider } from "./providers/index.ts";
-import type { Message } from "./types.ts";
-import { runAgent } from "./agent/loop.ts";
-import { tools } from "./tools/index.ts";
-import { createAuthorizer } from "./permissions/index.ts";
+import { kiteHome } from "./config/index.ts";
+import { runPrint } from "./modes/print.ts";
+import { runRepl } from "./modes/repl.ts";
 import { createTerminalAsk } from "./permissions/prompt.ts";
-import { kiteHome, loadConfig } from "./config/index.ts";
-import { buildSystemPrompt } from "./config/prompt.ts";
-import {
-  createSession,
-  latestSession,
-  listSessions,
-  resumeSession,
-  sessionsDir,
-} from "./session/index.ts";
+import { providerNames } from "./providers/index.ts";
+import { Runtime, type RuntimeOptions } from "./runtime.ts";
+import { listSessions, sessionsDir } from "./session/index.ts";
 
 loadEnv({
   path: fileURLToPath(new URL("../.env", import.meta.url)),
   quiet: true,
 });
+
+const USAGE = `kite - a terminal coding agent
+
+Usage:
+  kite                       interactive UI
+  kite --repl                plain-text chat
+  kite -p "prompt"           one prompt, then exit
+
+Options:
+  --provider <name>          ${providerNames.join(" | ")}
+  --model <name>
+  -c, --continue             resume the latest session in this folder
+  -r, --resume <id>          resume a specific session
+  --sessions                 list recent sessions
+  -y, --yes                  allow every tool call without asking
+  --max-turns <n>
+  -h, --help`;
 
 const { values } = parseArgs({
   options: {
@@ -32,94 +41,43 @@ const { values } = parseArgs({
     resume: { type: "string", short: "r" },
     continue: { type: "boolean", short: "c", default: false },
     sessions: { type: "boolean", default: false },
+    repl: { type: "boolean", default: false },
+    help: { type: "boolean", short: "h", default: false },
   },
 });
 
 async function main() {
-  const dir = sessionsDir(kiteHome());
+  if (values.help) return console.log(USAGE);
 
   if (values.sessions) {
-    const all = listSessions(dir).slice(0, 20);
+    const all = listSessions(sessionsDir(kiteHome())).slice(0, 20);
     if (!all.length) console.log("No sessions yet.");
-    for (const s of all)
-      console.log(`${s.id}  ${s.modified.toLocaleString()}  ${s.firstPrompt ?? ""}`);
+    for (const s of all) console.log(`${s.id}  ${s.modified.toLocaleString()}  ${s.firstPrompt ?? ""}`);
     return;
   }
 
-  if (!values.prompt) {
-    console.error(
-      `No prompt bhai!, try: node src/main.ts -p "prompt" [--provider anthropic|anthropic-xkiro|gemini|groq] [--continue | --resume <id>] [--yes] | --sessions`,
-    );
-    process.exit(1);
-  }
-
-  const cfg = loadConfig({
-    flags: {
-      provider: values.provider,
-      model: values.model,
-      maxTurns: values["max-turns"] ? Number(values["max-turns"]) : undefined,
-    },
-  });
-  if (!Number.isInteger(cfg.maxTurns) || cfg.maxTurns < 1)
+  const maxTurns = values["max-turns"] ? Number(values["max-turns"]) : undefined;
+  if (maxTurns !== undefined && (!Number.isInteger(maxTurns) || maxTurns < 1))
     throw new Error("--max-turns must be a positive integer");
 
-  const provider = getProvider(cfg.provider);
-  const model = cfg.model ?? provider.defaultModel;
-  const contextWindow = cfg.contextWindow ?? provider.contextWindow;
+  const opts: RuntimeOptions = {
+    flags: { provider: values.provider, model: values.model, maxTurns },
+    yes: values.yes,
+    resume: values.resume,
+    continue: values.continue,
+  };
 
-  // Start a new session, or pick up an old one.
-  const resumeId =
-    values.resume ?? (values.continue ? latestSession(dir, process.cwd())?.id : undefined);
-  if (values.continue && !resumeId) console.error("No earlier session in this folder; starting a new one.");
-
-  let messages: Message[] = [];
-  let session;
-  if (resumeId) {
-    ({ session, messages } = resumeSession(dir, resumeId));
-    console.log(`Resumed session ${session.id} (${messages.length} messages)`);
+  if (values.prompt) {
+    await runPrint(new Runtime({ ...opts, ask: createTerminalAsk() }), values.prompt);
+  } else if (values.repl) {
+    await runRepl(opts);
+  } else if (process.stdin.isTTY && process.stdout.isTTY) {
+    const { runTui } = await import("./tui/index.tsx");
+    await runTui(opts);
   } else {
-    session = createSession({ dir, cwd: process.cwd(), provider: provider.name, model });
+    console.error(`No terminal for the interactive UI. Use -p "prompt" or --repl.\n\n${USAGE}`);
+    process.exit(1);
   }
-
-  const userMessage: Message = { role: "user", content: values.prompt };
-  messages.push(userMessage);
-  session.append({ type: "message", message: userMessage });
-
-  await runAgent({
-    provider,
-    model,
-    system: buildSystemPrompt({ extra: cfg.systemPrompt }),
-    tools,
-    messages,
-    maxTurns: cfg.maxTurns,
-    compaction: contextWindow
-      ? { contextWindow, threshold: cfg.compactAt, keepRecent: cfg.keepRecent }
-      : undefined,
-    authorize: createAuthorizer({
-      ask: createTerminalAsk(),
-      yes: values.yes,
-      rules: cfg.permissions,
-    }),
-    onEvent(event) {
-      if (event.type === "message") session.append({ type: "message", message: event.message });
-      else if (event.type === "compacted") {
-        session.append({ type: "compaction", summary: event.summary, keep: event.keep });
-        console.log(`\n (compacted context: ${event.before} -> ${event.after} messages)`);
-      } else if (event.type === "text") process.stdout.write(event.delta);
-      else if (event.type === "tool_start") console.log(`\n ${event.call.name}`);
-      else if (event.type === "tool_end") {
-        const lines = event.result.split("\n").length;
-        console.log(`\n ${event.isError ? event.result : lines}`);
-      } else if (event.type === "turn_end") {
-        const { usage, stopReason } = event.message;
-        console.log(
-          `\n\n Provider Name=${provider.name} ... Model=${model} ... Usage Input=${usage.input} ... Usage Output=${usage.output} ... StopReason=${stopReason}`,
-        );
-      }
-    },
-  });
-
-  console.log(`\n session: ${session.id}  (continue with --continue or --resume ${session.id})`);
 }
 
 main().catch((error) => {

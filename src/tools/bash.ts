@@ -20,7 +20,7 @@ export const bashTool: Tool = {
     },
     required: ["command"],
   },
-  execute(args) {
+  execute(args, signal) {
     const command = reqString(args, "command");
     const timeout = Math.min(
       optNumber(args, "timeout_ms") ?? DEFAULT_TIMEOUT_MS,
@@ -38,8 +38,8 @@ export const bashTool: Tool = {
       child.stdout.on("data", collect);
       child.stderr.on("data", collect);
 
-      const timer = setTimeout(() => {
-        timedOut = true;
+      let interrupted = false;
+      const killTree = () => {
         if (process.platform === "win32" && child.pid) {
           const pid = String(child.pid);
           killed = new Promise((done) => {
@@ -48,7 +48,17 @@ export const bashTool: Tool = {
               .on("error", () => done());
           });
         } else child.kill("SIGKILL");
+      };
+      const timer = setTimeout(() => {
+        timedOut = true;
+        killTree();
       }, timeout);
+      const onAbort = () => {
+        interrupted = true;
+        killTree();
+      };
+      if (signal?.aborted) onAbort();
+      else signal?.addEventListener("abort", onAbort, { once: true });
 
       child.on("error", (err) => {
         clearTimeout(timer);
@@ -56,12 +66,15 @@ export const bashTool: Tool = {
       });
       child.on("close", async (code) => {
         clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
         await killed;
         const body = truncate(output.trimEnd());
         resolve(
-          timedOut
-            ? `${body}\n[timed out after ${timeout}ms]`
-            : `${body}\n[exit code ${code}]`.trimStart(),
+          interrupted
+            ? `${body}\n[interrupted]`.trimStart()
+            : timedOut
+              ? `${body}\n[timed out after ${timeout}ms]`
+              : `${body}\n[exit code ${code}]`.trimStart(),
         );
       });
     });

@@ -36,7 +36,7 @@ export type ToolSpec = {
 export type ToolRisk = "read" | "write" | "exec";
 export type Tool = ToolSpec & {
   risk?: ToolRisk;
-  execute(args: Record<string, unknown>): Promise<string>;
+  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string>;
 };
 export type StreamEvent =
   | { type: "text_delta"; delta: string }
@@ -47,6 +47,7 @@ export type StreamOptions = {
   model: string;
   system?: string;
   tools?: ToolSpec[];
+  signal?: AbortSignal;
 };
 
 export interface Provider {

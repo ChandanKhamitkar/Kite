@@ -53,10 +53,11 @@ export function createOpenAICompat(
     name,
     defaultModel,
     contextWindow,
-    async *stream({ messages, model, system, tools = [] }) {
+    async *stream({ messages, model, system, tools = [], signal }) {
       const chat = toOpenAI(messages);
 
-      const stream = await client.chat.completions.create({
+      const stream = await client.chat.completions.create(
+        {
         model,
         stream: true,
         stream_options: { include_usage: true },
@@ -73,7 +74,9 @@ export function createOpenAICompat(
               },
             }))
           : undefined,
-      });
+        },
+        { signal },
+      );
 
       let text = "";
       const calls: {

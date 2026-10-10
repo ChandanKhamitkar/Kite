@@ -25,6 +25,8 @@ export type AgentOptions = {
   tools: Tool[];
   messages: Message[];
   maxTurns?: number;
+  /** Abort to stop after the current step; history stays valid. */
+  signal?: AbortSignal;
   /** Called before every tool runs. Without it, every tool is allowed. */
   authorize?: Authorizer;
   /** Summarize old messages when the context nears the model's window. */
@@ -42,7 +44,10 @@ export async function runAgent(opts: AgentOptions) {
     });
   };
 
+  const { signal } = opts;
+
   for (let turn = 1; turn <= maxTurns; ++turn) {
+    signal?.throwIfAborted();
     const c = opts.compaction;
     if (c && contextTokens(messages) >= c.contextWindow * c.threshold) {
       const done = await compact({ provider, model, messages, keepRecent: c.keepRecent });
@@ -56,6 +61,7 @@ export async function runAgent(opts: AgentOptions) {
       model,
       system,
       tools,
+      signal,
     })) {
       if (event.type === "text_delta")
         onEvent({ type: "text", delta: event.delta });
@@ -79,6 +85,7 @@ export async function runAgent(opts: AgentOptions) {
       let isError = false;
 
       try {
+        if (signal?.aborted) throw new Error("interrupted by user");
         const tool = tools.find((tool) => tool.name === call.name);
         if (!tool) throw new Error(`unknown tool name ${call.name}`);
 
@@ -89,7 +96,7 @@ export async function runAgent(opts: AgentOptions) {
             throw new Error(decision.reason ?? "permission denied");
         }
 
-        result = await tool.execute(call.arguments);
+        result = await tool.execute(call.arguments, signal);
       } catch (error) {
         result = `Error ${error instanceof Error ? error.message : String(error)}`;
         isError = true;
