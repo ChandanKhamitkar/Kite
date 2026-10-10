@@ -84,13 +84,17 @@ export function loadRules(dir = process.cwd()): Rules {
   } catch (error) {
     throw new Error(`could not parse ${file}: ${(error as Error).message}`);
   }
-  const perms = (parsed as { permissions?: Record<string, unknown> })
-    ?.permissions;
+  return parseRules((parsed as { permissions?: unknown })?.permissions);
+}
+
+/** Pick the string-array `allow` / `deny` lists out of a `permissions` value. */
+export function parseRules(perms: unknown): Rules {
+  const obj = (perms ?? {}) as Record<string, unknown>;
   const list = (v: unknown) =>
     Array.isArray(v) && v.every((x) => typeof x === "string")
       ? (v as string[])
       : undefined;
-  return { allow: list(perms?.allow), deny: list(perms?.deny) };
+  return { allow: list(obj.allow), deny: list(obj.deny) };
 }
 
 /** Human-readable summary of a call, for permission prompts. */

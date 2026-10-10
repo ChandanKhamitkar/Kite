@@ -1,4 +1,5 @@
 import type { Authorizer } from "../permissions/index.ts";
+import { compact, contextTokens, type Compaction } from "./compact.ts";
 import type {
   AssistantMessage,
   Message,
@@ -14,7 +15,8 @@ export type AgentEvent =
   | { type: "tool_start"; call: ToolCallBlock }
   | { type: "tool_end"; call: ToolCallBlock; result: string; isError: boolean }
   | { type: "turn_end"; message: AssistantMessage }
-  | { type: "message"; message: Message };
+  | { type: "message"; message: Message }
+  | ({ type: "compacted" } & Compaction);
 
 export type AgentOptions = {
   provider: Provider;
@@ -25,6 +27,8 @@ export type AgentOptions = {
   maxTurns?: number;
   /** Called before every tool runs. Without it, every tool is allowed. */
   authorize?: Authorizer;
+  /** Summarize old messages when the context nears the model's window. */
+  compaction?: { contextWindow: number; threshold: number; keepRecent: number };
   onEvent: (event: AgentEvent) => void;
 };
 export async function runAgent(opts: AgentOptions) {
@@ -39,7 +43,12 @@ export async function runAgent(opts: AgentOptions) {
   };
 
   for (let turn = 1; turn <= maxTurns; ++turn) {
-    
+    const c = opts.compaction;
+    if (c && contextTokens(messages) >= c.contextWindow * c.threshold) {
+      const done = await compact({ provider, model, messages, keepRecent: c.keepRecent });
+      if (done) onEvent({ type: "compacted", ...done });
+    }
+
     let assistant: AssistantMessage | undefined;
 
     for await (const event of provider.stream({

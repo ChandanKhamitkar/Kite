@@ -45,12 +45,14 @@ export function createOpenAICompat(
   baseURL: string,
   apiKey: string,
   defaultModel: string,
+  contextWindow = 128_000,
 ): Provider {
-  const client = new OpenAI({ baseURL, apiKey });
+  const client = new OpenAI({ baseURL, apiKey, maxRetries: 4 });
 
   return {
     name,
     defaultModel,
+    contextWindow,
     async *stream({ messages, model, system, tools = [] }) {
       const chat = toOpenAI(messages);
 

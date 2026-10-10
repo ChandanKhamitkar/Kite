@@ -52,5 +52,7 @@ export type StreamOptions = {
 export interface Provider {
   name: string;
   defaultModel: string;
+  /** Model context size in tokens; used to decide when to compact. */
+  contextWindow?: number;
   stream(opts: StreamOptions): AsyncIterable<StreamEvent>;
 }

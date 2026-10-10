@@ -40,13 +40,15 @@ export function createAnthropic(
   baseURL?: string,
   apiKey?: string,
   model?: string,
+  contextWindow = 200_000,
 ): Provider {
   const clientOptions = apiKey && baseURL ? { baseURL, apiKey } : {};
-  const client = new Anthropic(clientOptions);
+  const client = new Anthropic({ ...clientOptions, maxRetries: 4 });
 
   return {
     name: name || "anthropic",
     defaultModel: model || "mistralai/mistral-medium-3.5",
+    contextWindow,
     async *stream({ messages, model, system, tools = [] }) {
       const stream = client.messages.stream({
         model,
