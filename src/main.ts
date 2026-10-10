@@ -5,6 +5,8 @@ import { getProvider } from "./providers/index.ts";
 import type { Message } from "./types.ts";
 import { runAgent } from "./agent/loop.ts";
 import { tools } from "./tools/index.ts";
+import { createAuthorizer, loadRules } from "./permissions/index.ts";
+import { createTerminalAsk } from "./permissions/prompt.ts";
 
 config({
   path: fileURLToPath(new URL("../.env", import.meta.url)),
@@ -16,6 +18,7 @@ const { values } = parseArgs({
     prompt: { type: "string", short: "p" },
     provider: { type: "string", default: "anthropic-xkiro" },
     model: { type: "string" },
+    yes: { type: "boolean", short: "y", default: false },
   },
 });
 
@@ -40,6 +43,11 @@ await runAgent({
   model,
   tools,
   messages,
+  authorize: createAuthorizer({
+    ask: createTerminalAsk(),
+    yes: values.yes,
+    rules: loadRules(),
+  }),
   onEvent(event) {
     if (event.type === "text") process.stdout.write(event.delta);
     else if (event.type === "tool_start") console.log(`\n ${event.call.name}`);

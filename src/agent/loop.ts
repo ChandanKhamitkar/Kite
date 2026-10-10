@@ -1,13 +1,16 @@
+import type { Authorizer } from "../permissions/index.ts";
 import type {
   AssistantMessage,
   Message,
   Provider,
   Tool,
   ToolCallBlock,
+  ToolRisk,
 } from "../types.ts";
 
 export type AgentEvent =
   | { type: "text"; delta: string }
+  | { type: "permission_request"; call: ToolCallBlock; risk: ToolRisk }
   | { type: "tool_start"; call: ToolCallBlock }
   | { type: "tool_end"; call: ToolCallBlock; result: string; isError: boolean }
   | { type: "turn_end"; message: AssistantMessage }
@@ -20,6 +23,8 @@ export type AgentOptions = {
   tools: Tool[];
   messages: Message[];
   maxTurns?: number;
+  /** Called before every tool runs. Without it, every tool is allowed. */
+  authorize?: Authorizer;
   onEvent: (event: AgentEvent) => void;
 };
 export async function runAgent(opts: AgentOptions) {
@@ -66,7 +71,14 @@ export async function runAgent(opts: AgentOptions) {
 
       try {
         const tool = tools.find((tool) => tool.name === call.name);
-        if (!tool) throw new Error(`unknown tool name ${tool}`);
+        if (!tool) throw new Error(`unknown tool name ${call.name}`);
+
+        if (opts.authorize) {
+          onEvent({ type: "permission_request", call, risk: tool.risk ?? "exec" });
+          const decision = await opts.authorize(call, tool);
+          if (!decision.allow)
+            throw new Error(decision.reason ?? "permission denied");
+        }
 
         result = await tool.execute(call.arguments);
       } catch (error) {
