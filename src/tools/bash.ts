@@ -22,10 +22,7 @@ export const bashTool: Tool = {
   },
   execute(args, signal) {
     const command = reqString(args, "command");
-    const timeout = Math.min(
-      optNumber(args, "timeout_ms") ?? DEFAULT_TIMEOUT_MS,
-      MAX_TIMEOUT_MS,
-    );
+    const timeout = Math.min(optNumber(args, "timeout_ms") ?? DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
 
     return new Promise((resolve, reject) => {
       const child = spawn(command, { shell: true, cwd: process.cwd() });

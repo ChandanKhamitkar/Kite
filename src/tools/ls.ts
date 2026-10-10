@@ -18,8 +18,7 @@ export const lsTool: Tool = {
     const entries = await readdir(dir, { withFileTypes: true });
     entries.sort((a, b) => a.name.localeCompare(b.name));
     return truncate(
-      entries.map((e) => (e.isDirectory() ? `${e.name}/` : e.name)).join("\n") ||
-        "(empty)",
+      entries.map((e) => (e.isDirectory() ? `${e.name}/` : e.name)).join("\n") || "(empty)",
     );
   },
 };

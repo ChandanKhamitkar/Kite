@@ -57,7 +57,9 @@ Guidelines:
   for (const name of INSTRUCTION_FILES) {
     const file = join(cwd, name);
     if (existsSync(file)) {
-      parts.push(`Project instructions (${name}):\n${truncate(readFileSync(file, "utf-8").trim(), 8000)}`);
+      parts.push(
+        `Project instructions (${name}):\n${truncate(readFileSync(file, "utf-8").trim(), 8000)}`,
+      );
       break;
     }
   }

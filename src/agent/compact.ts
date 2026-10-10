@@ -47,7 +47,9 @@ export function renderTranscript(messages: Message[]): string {
       .join("\n");
   });
   const text = lines.join("\n\n");
-  return text.length > TRANSCRIPT_CHARS ? `…[earlier part omitted]\n${text.slice(-TRANSCRIPT_CHARS)}` : text;
+  return text.length > TRANSCRIPT_CHARS
+    ? `…[earlier part omitted]\n${text.slice(-TRANSCRIPT_CHARS)}`
+    : text;
 }
 
 /** Approximate current context size from the last assistant turn's usage. */

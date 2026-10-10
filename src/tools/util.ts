@@ -38,20 +38,14 @@ export function reqString(args: Record<string, unknown>, key: string): string {
   return value;
 }
 
-export function optString(
-  args: Record<string, unknown>,
-  key: string,
-): string | undefined {
+export function optString(args: Record<string, unknown>, key: string): string | undefined {
   const value = args[key];
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "string") throw new Error(`"${key}" must be a string`);
   return value;
 }
 
-export function optNumber(
-  args: Record<string, unknown>,
-  key: string,
-): number | undefined {
+export function optNumber(args: Record<string, unknown>, key: string): number | undefined {
   const value = args[key];
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "number" || !Number.isFinite(value))

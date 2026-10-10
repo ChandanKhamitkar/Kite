@@ -27,7 +27,8 @@ export async function runPrint(rt: Runtime, prompt: string): Promise<void> {
   process.once("SIGINT", onSigint);
 
   try {
-    if (rt.resumed) console.log(`Resumed session ${rt.session.id} (${rt.messages.length} messages)`);
+    if (rt.resumed)
+      console.log(`Resumed session ${rt.session.id} (${rt.messages.length} messages)`);
     await rt.send(prompt, { signal: controller.signal, onEvent: plainRenderer(rt) });
   } catch (error) {
     if (!isAbort(error)) throw error;
@@ -35,5 +36,7 @@ export async function runPrint(rt: Runtime, prompt: string): Promise<void> {
   } finally {
     process.off("SIGINT", onSigint);
   }
-  console.log(`\n session: ${rt.session.id}  (continue with --continue or --resume ${rt.session.id})`);
+  console.log(
+    `\n session: ${rt.session.id}  (continue with --continue or --resume ${rt.session.id})`,
+  );
 }

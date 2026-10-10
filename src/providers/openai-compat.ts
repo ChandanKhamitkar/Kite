@@ -1,11 +1,5 @@
 import OpenAI from "openai";
-import type {
-  ContentBlock,
-  Provider,
-  StopReason,
-  Usage,
-  Message,
-} from "../types.ts";
+import type { ContentBlock, Provider, StopReason, Usage, Message } from "../types.ts";
 
 function toOpenAI(messages: Message[]): OpenAI.ChatCompletionMessageParam[] {
   return messages.map((msg): OpenAI.ChatCompletionMessageParam => {
@@ -58,22 +52,20 @@ export function createOpenAICompat(
 
       const stream = await client.chat.completions.create(
         {
-        model,
-        stream: true,
-        stream_options: { include_usage: true },
-        messages: system
-          ? [{ role: "system", content: system }, ...chat]
-          : chat,
-        tools: tools.length
-          ? tools.map((tool) => ({
-              type: "function" as const,
-              function: {
-                name: tool.name,
-                description: tool.description,
-                parameters: tool.parameters,
-              },
-            }))
-          : undefined,
+          model,
+          stream: true,
+          stream_options: { include_usage: true },
+          messages: system ? [{ role: "system", content: system }, ...chat] : chat,
+          tools: tools.length
+            ? tools.map((tool) => ({
+                type: "function" as const,
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.parameters,
+                },
+              }))
+            : undefined,
         },
         { signal },
       );

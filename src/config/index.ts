@@ -20,7 +20,7 @@ export type Config = {
 };
 
 export const DEFAULTS: Config = {
-  provider: "anthropic-xkiro",
+  provider: "anthropic",
   maxTurns: 20,
   compactAt: 0.8,
   keepRecent: 6,

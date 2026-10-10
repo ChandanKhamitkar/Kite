@@ -11,13 +11,7 @@ import {
   matchesRule,
   type Verdict,
 } from "../src/permissions/index.ts";
-import type {
-  AssistantMessage,
-  Message,
-  Provider,
-  Tool,
-  ToolCallBlock,
-} from "../src/types.ts";
+import type { AssistantMessage, Message, Provider, Tool, ToolCallBlock } from "../src/types.ts";
 
 const call = (name: string, args: Record<string, unknown> = {}): ToolCallBlock => ({
   type: "toolCall",
@@ -131,8 +125,18 @@ describe("loop integration", () => {
       async *stream() {
         const message: AssistantMessage =
           turn++ === 0
-            ? { role: "assistant", content: calls, usage: { input: 0, output: 0 }, stopReason: "toolUse" }
-            : { role: "assistant", content: [{ type: "text", text: "done" }], usage: { input: 0, output: 0 }, stopReason: "stop" };
+            ? {
+                role: "assistant",
+                content: calls,
+                usage: { input: 0, output: 0 },
+                stopReason: "toolUse",
+              }
+            : {
+                role: "assistant",
+                content: [{ type: "text", text: "done" }],
+                usage: { input: 0, output: 0 },
+                stopReason: "stop",
+              };
         yield { type: "done", message };
       },
     };

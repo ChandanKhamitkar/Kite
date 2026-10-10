@@ -27,7 +27,8 @@ export function App({ rt, bridge }: { rt: Runtime; bridge: AskBridge }) {
   const lastCtrlC = useRef(0);
 
   useEffect(() => {
-    bridge.ask = (call, tool) => new Promise<Answer>((resolve) => setPending({ call, tool, resolve }));
+    bridge.ask = (call, tool) =>
+      new Promise<Answer>((resolve) => setPending({ call, tool, resolve }));
     return () => {
       bridge.ask = undefined;
     };
@@ -61,7 +62,8 @@ export function App({ rt, bridge }: { rt: Runtime; bridge: AskBridge }) {
       }
     } catch (error) {
       if (isAbort(error)) dispatch({ kind: "interrupt" });
-      else dispatch({ kind: "error", text: error instanceof Error ? error.message : String(error) });
+      else
+        dispatch({ kind: "error", text: error instanceof Error ? error.message : String(error) });
     } finally {
       abort.current = undefined;
       setBusy(false);
@@ -133,7 +135,9 @@ export function App({ rt, bridge }: { rt: Runtime; bridge: AskBridge }) {
         </Text>
       ))}
 
-      {pending ? <PermissionPanel call={pending.call} tool={pending.tool} onAnswer={answer} /> : null}
+      {pending ? (
+        <PermissionPanel call={pending.call} tool={pending.tool} onAnswer={answer} />
+      ) : null}
       {busy && !pending ? (
         <Box marginTop={1}>
           <Spinner label={running ? `running ${running}` : ui.streaming ? "writing" : "thinking"} />

@@ -23,17 +23,14 @@ export const editTool: Tool = {
     const oldString = reqString(args, "old_string");
     const newString = reqString(args, "new_string");
     if (oldString === "") throw new Error("old_string must not be empty");
-    if (oldString === newString)
-      throw new Error("old_string and new_string are identical");
+    if (oldString === newString) throw new Error("old_string and new_string are identical");
 
     const text = await readFile(full, "utf-8");
     const count = text.split(oldString).length - 1;
     if (count === 0) throw new Error("old_string not found in file");
     const all = optBool(args, "replace_all");
     if (count > 1 && !all)
-      throw new Error(
-        `old_string matches ${count} times; add more context or set replace_all`,
-      );
+      throw new Error(`old_string matches ${count} times; add more context or set replace_all`);
 
     // callback / split-join avoid `$` replacement patterns in new_string.
     const next = all

@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { runCommand } from "../src/commands.ts";
 import { isAbort, Runtime } from "../src/runtime.ts";
 import { listSessions, resumeSession } from "../src/session/index.ts";
-import { scriptedProvider, toolCall, useTempHome } from "./helpers.ts";
+import { scriptedProvider, toolCall, withTempHome } from "./helpers.ts";
 
-const home = useTempHome();
+const home = withTempHome();
 beforeEach(() => void home.setup());
 afterEach(() => home.teardown());
 
@@ -16,7 +16,10 @@ describe("Runtime", () => {
     const types: string[] = [];
     await rt.send("hi", { onEvent: (e) => types.push(e.type) });
 
-    assert.deepEqual(rt.messages.map((m) => m.role), ["user", "assistant"]);
+    assert.deepEqual(
+      rt.messages.map((m) => m.role),
+      ["user", "assistant"],
+    );
     assert.deepEqual(rt.usage, { input: 10, output: 5, turns: 1 });
     assert.ok(types.includes("text") && types.includes("turn_end"));
 
@@ -37,7 +40,10 @@ describe("Runtime", () => {
   });
 
   it("denies risky tools when there is no way to ask", async () => {
-    const provider = scriptedProvider([{ calls: [toolCall("c1", "bash", { command: "echo hi" })] }, { text: "ok" }]);
+    const provider = scriptedProvider([
+      { calls: [toolCall("c1", "bash", { command: "echo hi" })] },
+      { text: "ok" },
+    ]);
     const rt = new Runtime({ provider });
     await rt.send("run it");
     const result = rt.messages.find((m) => m.role === "toolResult");
@@ -55,7 +61,9 @@ describe("Runtime", () => {
     const rt = new Runtime({ provider, ask: async () => (asked++, "allow_session") });
     await rt.send("go");
     assert.equal(asked, 1);
-    const outputs = rt.messages.filter((m) => m.role === "toolResult").map((m) => (m as { content: string }).content);
+    const outputs = rt.messages
+      .filter((m) => m.role === "toolResult")
+      .map((m) => (m as { content: string }).content);
     assert.match(outputs[0]!, /one/);
     assert.match(outputs[1]!, /two/);
   });
@@ -63,7 +71,12 @@ describe("Runtime", () => {
   it("turns an abort into an AbortError and leaves valid history", async () => {
     const controller = new AbortController();
     const provider = scriptedProvider([
-      { calls: [toolCall("c1", "bash", { command: "echo hi" }), toolCall("c2", "bash", { command: "echo again" })] },
+      {
+        calls: [
+          toolCall("c1", "bash", { command: "echo hi" }),
+          toolCall("c2", "bash", { command: "echo again" }),
+        ],
+      },
     ]);
     const rt = new Runtime({ provider, yes: true });
     await assert.rejects(
@@ -74,7 +87,9 @@ describe("Runtime", () => {
       (error) => isAbort(error),
     );
     // every tool call in the assistant message has a matching result
-    const calls = rt.messages.flatMap((m) => (m.role === "assistant" ? m.content.filter((b) => b.type === "toolCall") : []));
+    const calls = rt.messages.flatMap((m) =>
+      m.role === "assistant" ? m.content.filter((b) => b.type === "toolCall") : [],
+    );
     const results = rt.messages.filter((m) => m.role === "toolResult");
     assert.equal(results.length, calls.length);
   });
@@ -91,7 +106,8 @@ describe("Runtime", () => {
 });
 
 describe("slash commands", () => {
-  const make = () => new Runtime({ provider: scriptedProvider([{ text: "x" }], { contextWindow: 1000 }) });
+  const make = () =>
+    new Runtime({ provider: scriptedProvider([{ text: "x" }], { contextWindow: 1000 }) });
 
   it("ignores normal text", async () => {
     assert.equal(await runCommand(make(), "hello"), undefined);
@@ -112,7 +128,10 @@ describe("slash commands", () => {
   it("/cost, /sessions, /help, /exit, unknown", async () => {
     const rt = make();
     await rt.send("hi");
-    assert.match((await runCommand(rt, "/cost"))!.output, /1 turns \| 10 input \+ 5 output tokens \| context \d+% full/);
+    assert.match(
+      (await runCommand(rt, "/cost"))!.output,
+      /1 turns \| 10 input \+ 5 output tokens \| context \d+% full/,
+    );
     assert.match((await runCommand(rt, "/sessions"))!.output, new RegExp(rt.session.id));
     assert.match((await runCommand(rt, "/help"))!.output, /\/compact/);
     assert.equal((await runCommand(rt, "/exit"))!.exit, true);

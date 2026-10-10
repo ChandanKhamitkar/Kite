@@ -67,8 +67,7 @@ export function createAuthorizer(opts: AuthorizerOptions = {}): Authorizer {
       };
 
     const verdict = await ask(call, tool);
-    if (verdict === "deny")
-      return { allow: false, reason: "the user denied this tool call" };
+    if (verdict === "deny") return { allow: false, reason: "the user denied this tool call" };
     if (verdict === "allow_session") sessionAllowed.add(call.name);
     return { allow: true };
   };
@@ -91,9 +90,7 @@ export function loadRules(dir = process.cwd()): Rules {
 export function parseRules(perms: unknown): Rules {
   const obj = (perms ?? {}) as Record<string, unknown>;
   const list = (v: unknown) =>
-    Array.isArray(v) && v.every((x) => typeof x === "string")
-      ? (v as string[])
-      : undefined;
+    Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : undefined;
   return { allow: list(obj.allow), deny: list(obj.deny) };
 }
 

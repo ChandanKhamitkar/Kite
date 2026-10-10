@@ -26,9 +26,7 @@ export function createTerminalAsk(shared?: Interface): Ask | undefined {
     const rl = shared ?? createInterface({ input: process.stdin, output: process.stdout });
     try {
       for (;;) {
-        const answer = (
-          await rl.question("  Allow? [y]es / [n]o / [a]lways this session: ")
-        )
+        const answer = (await rl.question("  Allow? [y]es / [n]o / [a]lways this session: "))
           .trim()
           .toLowerCase();
         if (VERDICTS[answer]) return VERDICTS[answer];

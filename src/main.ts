@@ -1,5 +1,5 @@
 import { config as loadEnv } from "dotenv";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { kiteHome } from "./config/index.ts";
 import { runPrint } from "./modes/print.ts";
@@ -9,10 +9,8 @@ import { providerNames } from "./providers/index.ts";
 import { Runtime, type RuntimeOptions } from "./runtime.ts";
 import { listSessions, sessionsDir } from "./session/index.ts";
 
-loadEnv({
-  path: fileURLToPath(new URL("../.env", import.meta.url)),
-  quiet: true,
-});
+// API keys: ~/.kite/.env first, then ./.env. Real environment variables always win.
+loadEnv({ path: [join(kiteHome(), ".env"), ".env"], quiet: true });
 
 const USAGE = `kite - a terminal coding agent
 
@@ -52,7 +50,8 @@ async function main() {
   if (values.sessions) {
     const all = listSessions(sessionsDir(kiteHome())).slice(0, 20);
     if (!all.length) console.log("No sessions yet.");
-    for (const s of all) console.log(`${s.id}  ${s.modified.toLocaleString()}  ${s.firstPrompt ?? ""}`);
+    for (const s of all)
+      console.log(`${s.id}  ${s.modified.toLocaleString()}  ${s.firstPrompt ?? ""}`);
     return;
   }
 
@@ -82,5 +81,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(`\nerror: ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
+  process.exitCode = 1;
 });

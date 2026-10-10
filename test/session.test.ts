@@ -99,7 +99,10 @@ describe("sessions", () => {
     await new Promise((r) => setTimeout(r, 20));
     const b = createSession({ dir, cwd: "/b", provider: "p", model: "m" });
 
-    assert.deepEqual(listSessions(dir).map((s) => s.id), [b.id, a.id]);
+    assert.deepEqual(
+      listSessions(dir).map((s) => s.id),
+      [b.id, a.id],
+    );
     assert.equal(latestSession(dir, "/a")?.id, a.id);
     assert.equal(latestSession(dir, "/a")?.firstPrompt, "first prompt in a");
     assert.equal(latestSession(dir, "/nowhere"), undefined);
@@ -110,8 +113,12 @@ describe("sessions", () => {
 describe("compaction", () => {
   it("never starts the kept tail on a tool result", () => {
     const msgs = [
-      user("1"), asst("2"), user("3"),
-      asst("4", 0, [{ id: "x", name: "t" }]), result("x"), asst("5"),
+      user("1"),
+      asst("2"),
+      user("3"),
+      asst("4", 0, [{ id: "x", name: "t" }]),
+      result("x"),
+      asst("5"),
     ];
     // keepRecent 2 would start at index 4 (toolResult); must back up to the assistant call.
     assert.equal(findCut(msgs, 2), 3);
@@ -121,7 +128,12 @@ describe("compaction", () => {
   it("replaces old messages in place with a summary", async () => {
     const msgs = [user("goal"), asst("a"), user("more"), asst("b"), user("now"), asst("c")];
     const seen: string[] = [];
-    const done = await compact({ provider: summarizer("DONE SO FAR", seen), model: "m", messages: msgs, keepRecent: 2 });
+    const done = await compact({
+      provider: summarizer("DONE SO FAR", seen),
+      model: "m",
+      messages: msgs,
+      keepRecent: 2,
+    });
 
     assert.ok(done);
     assert.equal(done.before, 6);
@@ -147,7 +159,11 @@ describe("compaction", () => {
   it("triggers inside the agent loop and is reported as an event", async () => {
     // History already holds a huge assistant turn, so the first loop turn must compact.
     const messages: Message[] = [
-      user("old goal"), asst("old", 0), user("older"), asst("older reply", 90_000), user("next task"),
+      user("old goal"),
+      asst("old", 0),
+      user("older"),
+      asst("older reply", 90_000),
+      user("next task"),
     ];
     const events: AgentEvent[] = [];
     let calls = 0;

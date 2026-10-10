@@ -47,24 +47,24 @@ export function createAnthropic(
 
   return {
     name: name || "anthropic",
-    defaultModel: model || "mistralai/mistral-medium-3.5",
+    defaultModel: model || "claude-sonnet-5-5",
     contextWindow,
     async *stream({ messages, model, system, tools = [], signal }) {
       const stream = client.messages.stream(
         {
-        model,
-        max_tokens: 4096,
-        system,
-        messages: toAnthropic(messages),
-        tools: tools.map((t) => ({
-          name: t.name,
-          description: t.description,
-          input_schema: t.parameters as Anthropic.Tool.InputSchema,
-        })),
+          model,
+          max_tokens: 4096,
+          system,
+          messages: toAnthropic(messages),
+          tools: tools.map((t) => ({
+            name: t.name,
+            description: t.description,
+            input_schema: t.parameters as Anthropic.Tool.InputSchema,
+          })),
         },
         { signal },
       );
-      
+
       const content: ContentBlock[] = [];
       let json = "";
 
@@ -96,8 +96,7 @@ export function createAnthropic(
           }
         } else if (event.type === "content_block_stop") {
           const block = content.at(-1);
-          if (block?.type === "toolCall")
-            block.arguments = json ? JSON.parse(json) : {};
+          if (block?.type === "toolCall") block.arguments = json ? JSON.parse(json) : {};
         }
       }
 

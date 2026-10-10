@@ -63,8 +63,7 @@ export async function runAgent(opts: AgentOptions) {
       tools,
       signal,
     })) {
-      if (event.type === "text_delta")
-        onEvent({ type: "text", delta: event.delta });
+      if (event.type === "text_delta") onEvent({ type: "text", delta: event.delta });
       else assistant = event.message;
     }
 
@@ -75,7 +74,7 @@ export async function runAgent(opts: AgentOptions) {
       message: assistant,
     });
 
-    if(assistant.stopReason !== "toolUse") return;
+    if (assistant.stopReason !== "toolUse") return;
 
     for (const call of assistant.content) {
       if (call.type !== "toolCall") continue;
@@ -92,8 +91,7 @@ export async function runAgent(opts: AgentOptions) {
         if (opts.authorize) {
           onEvent({ type: "permission_request", call, risk: tool.risk ?? "exec" });
           const decision = await opts.authorize(call, tool);
-          if (!decision.allow)
-            throw new Error(decision.reason ?? "permission denied");
+          if (!decision.allow) throw new Error(decision.reason ?? "permission denied");
         }
 
         result = await tool.execute(call.arguments, signal);

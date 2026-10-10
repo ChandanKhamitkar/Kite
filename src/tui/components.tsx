@@ -25,20 +25,31 @@ export function Spinner({ label }: { label: string }) {
   );
 }
 
-export function Banner({ provider, model, cwd, resumed }: { provider: string; model: string; cwd: string; resumed: number }) {
+export function Banner({
+  provider,
+  model,
+  cwd,
+  resumed,
+}: {
+  provider: string;
+  model: string;
+  cwd: string;
+  resumed: number;
+}) {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Text>
         <Text color="cyan" bold>
           ◢ kite
         </Text>
-        <Text dimColor>  terminal coding agent</Text>
+        <Text dimColor> terminal coding agent</Text>
       </Text>
       <Text dimColor>
         {provider} · {model} · {cwd}
       </Text>
       <Text dimColor>
-        {resumed ? `resumed ${resumed} messages · ` : ""}/help for commands · enter to send · ctrl+c to quit
+        {resumed ? `resumed ${resumed} messages · ` : ""}/help for commands · enter to send · ctrl+c
+        to quit
       </Text>
     </Box>
   );
@@ -53,24 +64,39 @@ function ToolCard({ item }: { item: Extract<Item, { kind: "tool" }> }) {
         <Text color={color}>● </Text>
         <Text bold>{item.call.name}</Text>
         <Text> {summarizeCall(item.call)}</Text>
-        <Text dimColor>  {item.status === "denied" ? "denied" : formatMs(item.ms)}</Text>
+        <Text dimColor> {item.status === "denied" ? "denied" : formatMs(item.ms)}</Text>
       </Text>
       {item.status !== "done" || lines.length ? (
         <Box flexDirection="column" paddingLeft={2}>
           {lines.map((l, i) => (
-            <Text key={i} dimColor={item.status === "done"} color={item.status === "done" ? undefined : color}>
+            <Text
+              key={i}
+              dimColor={item.status === "done"}
+              color={item.status === "done" ? undefined : color}
+            >
               {i === 0 ? "╰ " : "  "}
               {l}
             </Text>
           ))}
-          {more > 0 ? <Text dimColor>  … {more} more line{more === 1 ? "" : "s"}</Text> : null}
+          {more > 0 ? (
+            <Text dimColor>
+              {" "}
+              … {more} more line{more === 1 ? "" : "s"}
+            </Text>
+          ) : null}
         </Box>
       ) : null}
     </Box>
   );
 }
 
-export function ItemView({ item, banner }: { item: Item; banner: React.ComponentProps<typeof Banner> }) {
+export function ItemView({
+  item,
+  banner,
+}: {
+  item: Item;
+  banner: React.ComponentProps<typeof Banner>;
+}) {
   switch (item.kind) {
     case "banner":
       return <Banner {...banner} />;
@@ -110,7 +136,9 @@ function DiffLines({ text, sign, color }: { text: string; sign: string; color: s
           {sign} {l}
         </Text>
       ))}
-      {lines.length > MAX_DIFF ? <Text dimColor>  … {lines.length - MAX_DIFF} more lines</Text> : null}
+      {lines.length > MAX_DIFF ? (
+        <Text dimColor> … {lines.length - MAX_DIFF} more lines</Text>
+      ) : null}
     </>
   );
 }
@@ -161,7 +189,8 @@ export function PermissionPanel({
       </Text>
       <CallPreview call={call} />
       <Text>
-        <Text color="green">[y]</Text> yes  <Text color="red">[n]</Text> no  <Text color="cyan">[a]</Text> always this session
+        <Text color="green">[y]</Text> yes <Text color="red">[n]</Text> no{" "}
+        <Text color="cyan">[a]</Text> always this session
       </Text>
     </Box>
   );

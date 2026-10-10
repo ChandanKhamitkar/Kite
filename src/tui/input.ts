@@ -30,7 +30,11 @@ export const emptyInput = (history: string[] = []): InputState => ({
   draft: "",
 });
 
-const setValue = (s: InputState, value: string, cursor = value.length): InputState => ({ ...s, value, cursor });
+const setValue = (s: InputState, value: string, cursor = value.length): InputState => ({
+  ...s,
+  value,
+  cursor,
+});
 
 /**
  * Apply one keypress. `submit` is set when the user pressed enter on a
@@ -66,7 +70,11 @@ export function editInput(
     if (!s.history.length) return { state: s };
     const idx = s.browsing === null ? s.history.length - 1 : Math.max(s.browsing - 1, 0);
     return {
-      state: { ...setValue(s, s.history[idx]!), browsing: idx, draft: s.browsing === null ? s.value : s.draft },
+      state: {
+        ...setValue(s, s.history[idx]!),
+        browsing: idx,
+        draft: s.browsing === null ? s.value : s.draft,
+      },
     };
   }
   if (key.downArrow) {
@@ -79,12 +87,21 @@ export function editInput(
   // Terminals send backspace as either "backspace" or "delete".
   if (key.backspace || key.delete) {
     if (s.cursor === 0) return { state: s };
-    return { state: setValue(s, s.value.slice(0, s.cursor - 1) + s.value.slice(s.cursor), s.cursor - 1) };
+    return {
+      state: setValue(s, s.value.slice(0, s.cursor - 1) + s.value.slice(s.cursor), s.cursor - 1),
+    };
   }
 
   if (key.meta || key.escape || key.tab || !input) return { state: s };
 
   // Typed or pasted text; newlines become spaces so one prompt stays one line.
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping control characters is the point
   const text = input.replace(/[\r\n]+/g, " ").replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "");
-  return { state: setValue({ ...s, browsing: null }, s.value.slice(0, s.cursor) + text + s.value.slice(s.cursor), s.cursor + text.length) };
+  return {
+    state: setValue(
+      { ...s, browsing: null },
+      s.value.slice(0, s.cursor) + text + s.value.slice(s.cursor),
+      s.cursor + text.length,
+    ),
+  };
 }

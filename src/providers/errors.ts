@@ -5,7 +5,13 @@ export class ProviderError extends Error {
   retryable: boolean;
   provider: string;
 
-  constructor(provider: string, message: string, status?: number, retryable = false, cause?: unknown) {
+  constructor(
+    provider: string,
+    message: string,
+    status?: number,
+    retryable = false,
+    cause?: unknown,
+  ) {
     super(message, { cause });
     this.name = "ProviderError";
     this.provider = provider;
@@ -22,22 +28,58 @@ export function normalizeError(error: unknown, provider: string): Error {
   const status = typeof e?.status === "number" ? e.status : undefined;
 
   if (status === 401 || status === 403)
-    return new ProviderError(provider, `${provider}: authentication failed (${status}). Check the API key.`, status, false, error);
+    return new ProviderError(
+      provider,
+      `${provider}: authentication failed (${status}). Check the API key.`,
+      status,
+      false,
+      error,
+    );
   if (status === 404)
-    return new ProviderError(provider, `${provider}: not found (404). Check the model name. ${detail}`, status, false, error);
+    return new ProviderError(
+      provider,
+      `${provider}: not found (404). Check the model name. ${detail}`,
+      status,
+      false,
+      error,
+    );
   if (status === 429)
-    return new ProviderError(provider, `${provider}: rate limited (429). Wait a bit and try again.`, status, true, error);
+    return new ProviderError(
+      provider,
+      `${provider}: rate limited (429). Wait a bit and try again.`,
+      status,
+      true,
+      error,
+    );
   if (status !== undefined && status >= 500)
-    return new ProviderError(provider, `${provider}: server error (${status}). ${detail}`, status, true, error);
+    return new ProviderError(
+      provider,
+      `${provider}: server error (${status}). ${detail}`,
+      status,
+      true,
+      error,
+    );
   if (status !== undefined)
-    return new ProviderError(provider, `${provider}: request rejected (${status}). ${detail}`, status, false, error);
+    return new ProviderError(
+      provider,
+      `${provider}: request rejected (${status}). ${detail}`,
+      status,
+      false,
+      error,
+    );
 
   const connection =
     e?.name === "APIConnectionError" ||
     e?.name === "APIConnectionTimeoutError" ||
     ["ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT"].includes(e?.code ?? "");
   if (connection)
-    return new ProviderError(provider, `${provider}: could not reach the API. Check your network.`, undefined, true, error);
+    return new ProviderError(
+      provider,
+      `${provider}: could not reach the API. Check your network.`,
+      undefined,
+      true,
+      error,
+    );
 
   return error instanceof Error ? error : new Error(detail);
 }

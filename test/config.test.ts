@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 
 import { DEFAULTS, loadConfig } from "../src/config/index.ts";
 import { buildSystemPrompt } from "../src/config/prompt.ts";
-import { normalizeError, ProviderError } from "../src/providers/errors.ts";
+import { normalizeError, type ProviderError } from "../src/providers/errors.ts";
 
 let root: string;
 let home: string;

@@ -41,7 +41,11 @@ export async function runRepl(opts: RuntimeOptions): Promise<void> {
         await rt.send(line, { signal: controller.signal, onEvent: plainRenderer(rt) });
       }
     } catch (error) {
-      console.log(isAbort(error) ? "\n interrupted" : `\nerror: ${error instanceof Error ? error.message : String(error)}`);
+      console.log(
+        isAbort(error)
+          ? "\n interrupted"
+          : `\nerror: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       controller = undefined;
     }

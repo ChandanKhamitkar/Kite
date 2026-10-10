@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { AssistantMessage, Provider, ToolCallBlock } from "../src/types.ts";
 
 /** Point KITE_HOME at a temp folder for the duration of a test file. */
-export function useTempHome() {
+export function withTempHome() {
   let dir = "";
   let previous: string | undefined;
   return {
@@ -29,7 +29,10 @@ export type Script = { text?: string; calls?: ToolCallBlock[] };
  * A provider that plays back one scripted reply per call, then "done".
  * Each reply streams its text, and ends with tool calls if it has any.
  */
-export function scriptedProvider(script: Script[], opts: { contextWindow?: number } = {}): Provider & { requests: number } {
+export function scriptedProvider(
+  script: Script[],
+  opts: { contextWindow?: number } = {},
+): Provider & { requests: number } {
   const p = {
     name: "fake",
     defaultModel: "fake-1",
@@ -54,7 +57,11 @@ export function scriptedProvider(script: Script[], opts: { contextWindow?: numbe
   return p;
 }
 
-export const toolCall = (id: string, name: string, args: Record<string, unknown> = {}): ToolCallBlock => ({
+export const toolCall = (
+  id: string,
+  name: string,
+  args: Record<string, unknown> = {},
+): ToolCallBlock => ({
   type: "toolCall",
   id,
   name,

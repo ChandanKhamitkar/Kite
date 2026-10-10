@@ -5,8 +5,15 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { Runtime } from "../src/runtime.ts";
 import { App, type AskBridge } from "../src/tui/app.tsx";
 import { editInput, emptyInput, type InputState } from "../src/tui/input.ts";
-import { formatMs, formatTokens, initialState, previewLines, reduce, summarizeCall } from "../src/tui/state.ts";
-import { scriptedProvider, tick, toolCall, useTempHome } from "./helpers.ts";
+import {
+  formatMs,
+  formatTokens,
+  initialState,
+  previewLines,
+  reduce,
+  summarizeCall,
+} from "../src/tui/state.ts";
+import { scriptedProvider, tick, toolCall, withTempHome } from "./helpers.ts";
 
 describe("transcript reducer", () => {
   const now = 1000;
@@ -16,7 +23,18 @@ describe("transcript reducer", () => {
     let s = reduce(initialState(), ev({ type: "text", delta: "Hel" }));
     s = reduce(s, ev({ type: "text", delta: "lo" }));
     assert.equal(s.streaming, "Hello");
-    s = reduce(s, ev({ type: "message", message: { role: "assistant", content: [{ type: "text", text: "Hello" }], usage: { input: 0, output: 0 }, stopReason: "stop" } }));
+    s = reduce(
+      s,
+      ev({
+        type: "message",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Hello" }],
+          usage: { input: 0, output: 0 },
+          stopReason: "stop",
+        },
+      }),
+    );
     assert.equal(s.streaming, "");
     assert.deepEqual(s.items.at(-1), { id: s.items.at(-1)!.id, kind: "assistant", text: "Hello" });
   });
@@ -34,7 +52,9 @@ describe("transcript reducer", () => {
   it("marks denied vs failed tools", () => {
     const call = toolCall("t1", "bash");
     const end = (result: string) =>
-      reduce(initialState(), ev({ type: "tool_end", call, result, isError: true })).items.at(-1) as any;
+      reduce(initialState(), ev({ type: "tool_end", call, result, isError: true })).items.at(
+        -1,
+      ) as any;
     assert.equal(end("Error the user denied this tool call").status, "denied");
     assert.equal(end("Error ENOENT: no such file").status, "error");
   });
@@ -43,7 +63,10 @@ describe("transcript reducer", () => {
     let s = reduce(initialState(), ev({ type: "text", delta: "partial answer" }));
     s = reduce(s, { kind: "interrupt" });
     assert.equal(s.streaming, "");
-    assert.deepEqual(s.items.slice(-2).map((i) => i.kind), ["assistant", "info"]);
+    assert.deepEqual(
+      s.items.slice(-2).map((i) => i.kind),
+      ["assistant", "info"],
+    );
   });
 
   it("reset rebuilds the transcript with a new epoch", () => {
@@ -54,7 +77,10 @@ describe("transcript reducer", () => {
 
   it("formats helpers", () => {
     assert.equal(summarizeCall(toolCall("1", "bash", { command: "npm   test" })), "npm test");
-    assert.equal(summarizeCall(toolCall("1", "grep", { pattern: "foo", path: "src" })), "foo in src");
+    assert.equal(
+      summarizeCall(toolCall("1", "grep", { pattern: "foo", path: "src" })),
+      "foo in src",
+    );
     assert.equal(summarizeCall(toolCall("1", "bash", { command: "x".repeat(200) })).length, 80);
     assert.deepEqual(previewLines("1\n2\n3\n4\n5\n", 3), { lines: ["1", "2", "3"], more: 2 });
     assert.equal(formatTokens(1234), "1.2k");
@@ -106,11 +132,14 @@ describe("input editing", () => {
 });
 
 describe("App", () => {
-  const home = useTempHome();
+  const home = withTempHome();
   beforeEach(() => void home.setup());
   afterEach(() => home.teardown());
 
-  const mount = (provider = scriptedProvider([{ text: "Hi from kite" }], { contextWindow: 1000 }), yes = false) => {
+  const mount = (
+    provider = scriptedProvider([{ text: "Hi from kite" }], { contextWindow: 1000 }),
+    yes = false,
+  ) => {
     const bridge: AskBridge = {};
     const rt = new Runtime({
       provider,
@@ -148,7 +177,10 @@ describe("App", () => {
   });
 
   it("asks for permission, shows the command, and runs on 'y'", async () => {
-    const provider = scriptedProvider([{ calls: [toolCall("c1", "bash", { command: "echo from-tool" })] }, { text: "finished" }]);
+    const provider = scriptedProvider([
+      { calls: [toolCall("c1", "bash", { command: "echo from-tool" })] },
+      { text: "finished" },
+    ]);
     const { ui } = mount(provider);
     await tick();
     await typeLine(ui, "do it");
@@ -165,7 +197,10 @@ describe("App", () => {
   });
 
   it("denies on 'n' and the model sees the denial", async () => {
-    const provider = scriptedProvider([{ calls: [toolCall("c1", "bash", { command: "echo nope" })] }, { text: "ok" }]);
+    const provider = scriptedProvider([
+      { calls: [toolCall("c1", "bash", { command: "echo nope" })] },
+      { text: "ok" },
+    ]);
     const { ui, rt } = mount(provider);
     await tick();
     await typeLine(ui, "do it");
@@ -173,7 +208,10 @@ describe("App", () => {
     await tick(300);
 
     assert.match(ui.frames.join("\n"), /denied/);
-    const result = rt.messages.find((m) => m.role === "toolResult") as { isError: boolean; content: string };
+    const result = rt.messages.find((m) => m.role === "toolResult") as {
+      isError: boolean;
+      content: string;
+    };
     assert.ok(result.isError && /denied/.test(result.content));
     ui.unmount();
   });

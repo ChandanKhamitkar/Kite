@@ -46,12 +46,14 @@ export class Runtime {
   readonly sessionsDir = sessionsDir(kiteHome());
   private authorize: Authorizer;
 
-  constructor(private opts: RuntimeOptions = {}) {
+  constructor(opts: RuntimeOptions = {}) {
     this.cfg = loadConfig({ flags: opts.flags });
     this.provider = opts.provider ?? getProvider(this.cfg.provider);
     this.model = this.cfg.model ?? this.provider.defaultModel;
 
-    const id = opts.resume ?? (opts.continue ? latestSession(this.sessionsDir, process.cwd())?.id : undefined);
+    const id =
+      opts.resume ??
+      (opts.continue ? latestSession(this.sessionsDir, process.cwd())?.id : undefined);
     if (id) {
       const resumed = resumeSession(this.sessionsDir, id);
       this.session = resumed.session;
@@ -104,11 +106,16 @@ export class Runtime {
         maxTurns: this.cfg.maxTurns,
         signal,
         compaction: window
-          ? { contextWindow: window, threshold: this.cfg.compactAt, keepRecent: this.cfg.keepRecent }
+          ? {
+              contextWindow: window,
+              threshold: this.cfg.compactAt,
+              keepRecent: this.cfg.keepRecent,
+            }
           : undefined,
         authorize: this.authorize,
         onEvent: (event) => {
-          if (event.type === "message") this.session.append({ type: "message", message: event.message });
+          if (event.type === "message")
+            this.session.append({ type: "message", message: event.message });
           else if (event.type === "compacted")
             this.session.append({ type: "compaction", summary: event.summary, keep: event.keep });
           else if (event.type === "turn_end") {

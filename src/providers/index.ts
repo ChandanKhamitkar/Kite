@@ -32,8 +32,8 @@ const providers: Record<string, () => Provider> = {
       "groq",
       "https://api.groq.com/openai/v1",
       requireEnv("GROQ_API_KEY"),
-      "llama-3.3-70b-versatile",
-      128_000,
+      "openai/gpt-oss-120b",
+      131_072,
     ),
 };
 

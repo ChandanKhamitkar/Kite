@@ -45,7 +45,11 @@ export function initialState(): UiState {
 const DENIED = /denied|deny rule|needs permission|interrupted by user/;
 
 function add(state: UiState, item: DistributiveOmit<Item, "id">): UiState {
-  return { ...state, items: [...state.items, { ...item, id: state.nextId } as Item], nextId: state.nextId + 1 };
+  return {
+    ...state,
+    items: [...state.items, { ...item, id: state.nextId } as Item],
+    nextId: state.nextId + 1,
+  };
 }
 type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never;
 
@@ -62,7 +66,8 @@ export function reduce(state: UiState, action: Action): UiState {
 
     case "interrupt": {
       let next = state;
-      if (state.streaming.trim()) next = add(next, { kind: "assistant", text: `${state.streaming.trim()} …` });
+      if (state.streaming.trim())
+        next = add(next, { kind: "assistant", text: `${state.streaming.trim()} …` });
       next = add(next, { kind: "info", text: "interrupted" });
       return { ...next, streaming: "", running: [] };
     }
@@ -89,7 +94,10 @@ export function reduce(state: UiState, action: Action): UiState {
 
         case "tool_end": {
           const started = state.running.find((r) => r.call.id === event.call.id);
-          const next = { ...state, running: state.running.filter((r) => r.call.id !== event.call.id) };
+          const next = {
+            ...state,
+            running: state.running.filter((r) => r.call.id !== event.call.id),
+          };
           return add(next, {
             kind: "tool",
             call: event.call,
@@ -100,7 +108,10 @@ export function reduce(state: UiState, action: Action): UiState {
         }
 
         case "compacted":
-          return add(state, { kind: "info", text: `compacted context: ${event.before} -> ${event.after} messages` });
+          return add(state, {
+            kind: "info",
+            text: `compacted context: ${event.before} -> ${event.after} messages`,
+          });
 
         default:
           return state;
@@ -124,11 +135,18 @@ export function summarizeCall(call: ToolCallBlock, max = 80): string {
 /** First `max` lines of a result, plus how many were left out. */
 export function previewLines(text: string, max = 3): { lines: string[]; more: number } {
   const all = text.replace(/\s+$/, "").split("\n");
-  return { lines: all.slice(0, max).map((l) => (l.length > 160 ? `${l.slice(0, 159)}…` : l)), more: Math.max(all.length - max, 0) };
+  return {
+    lines: all.slice(0, max).map((l) => (l.length > 160 ? `${l.slice(0, 159)}…` : l)),
+    more: Math.max(all.length - max, 0),
+  };
 }
 
 export function formatTokens(n: number): string {
-  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+  return n >= 1_000_000
+    ? `${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1000
+      ? `${(n / 1000).toFixed(1)}k`
+      : String(n);
 }
 
 export function formatMs(ms: number): string {
